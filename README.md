@@ -4,6 +4,19 @@
 > checks customer ratings, understands product images, and only places an order
 > after explicit user confirmation.
 
+## 🚀 Live Demo
+
+[Try the AI Shopping Agent](https://ai-shopping-agent-fvz8dpwpsfrihivomnkcz2.streamlit.app/)
+
+Try a request such as:
+
+```text
+I want organic honey under $20 with a 4.5+ rating
+```
+
+You can also upload one of the sample product images from `docs/sample_images/`
+to exercise the multimodal search path.
+
 This project demonstrates an agentic workflow where the LLM does not own the
 business data or transaction logic. LangChain orchestrates the conversation;
 SQLite-backed tools perform product lookup, rating aggregation, and checkout;
