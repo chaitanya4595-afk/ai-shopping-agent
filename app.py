@@ -10,6 +10,10 @@ from ai_shopping_agent.agent import agent
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="AI Shopping Assistant", page_icon="🛒", layout="wide")
 
+# Initialize chat state before any UI action can append to it.
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
 st.title("🛒 AI Shopping Assistant")
 st.caption("Tell me what you want — I'll search, rate, and order the best match for you.")
 
@@ -33,18 +37,17 @@ with st.sidebar:
             tmp.write(uploaded_file.getvalue())
             image_path = tmp.name
 
-        prompt = f"I uploaded a product image. Please analyze it and find similar products in the store. Image path: {image_path}"
+        prompt = (
+            "I uploaded a product image. Please analyze it and find similar products "
+            f"in the store. Image path: {image_path}"
+        )
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.session_state.pending_image = uploaded_file.name
         st.rerun()
 
 # ---------------------------------------------------------------------------
-# Chat state
-# ---------------------------------------------------------------------------
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
 # Render history — show a friendlier label for image-search messages
+# ---------------------------------------------------------------------------
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if msg["role"] == "user" and msg["content"].startswith("I uploaded a product image"):
@@ -54,7 +57,7 @@ for msg in st.session_state.messages:
             st.markdown(msg["content"].replace("$", r"\$"))
 
 # ---------------------------------------------------------------------------
-# Run agent if there's an unprocessed message (image upload triggers this)
+# Run agent if there's an unprocessed image-search message
 # ---------------------------------------------------------------------------
 if (
     st.session_state.messages
