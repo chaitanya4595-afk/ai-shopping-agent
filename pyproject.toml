@@ -2,7 +2,7 @@
 name = "ai-shopping-agent"
 version = "0.1.0"
 description = "Tool-using multimodal shopping agent built with LangChain, Groq, SQLite, and Streamlit."
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12"
 dependencies = [
     "streamlit>=1.57",
     "langchain>=1.4",
