@@ -5,9 +5,9 @@
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![LangChain](https://img.shields.io/badge/LangChain-Agent%20Tools-1C3C3C)
 
-> A multimodal, tool-using shopping assistant that searches a catalog, checks ratings, understands product images, and only places an order after explicit user confirmation.
+> A multimodal, tool-using shopping assistant that searches a catalog, checks ratings, understands product images, and follows an explicit-confirmation policy before demo checkout.
 
-**Why this project matters:** the LLM is not allowed to own business data or transaction logic. It orchestrates the workflow, while deterministic tools handle search, ratings, and checkout. That separation makes the system easier to reason about, test, and extend.
+**Why this project matters:** the LLM does not own business data or transaction logic. It orchestrates the workflow, while deterministic tools handle search, ratings, and checkout. That separation makes the system easier to reason about, test, and extend.
 
 ## Try it in 60 seconds
 
@@ -46,7 +46,7 @@ flowchart LR
 
 - **Tool-based agent orchestration** — the model chooses when to search, retrieve ratings, inspect an image, or execute checkout.
 - **Multimodal routing** — a vision model converts an uploaded image into product-search intent, then reuses the same search pipeline as text input.
-- **Action guardrail** — checkout is separated from browsing and requires explicit user confirmation.
+- **Policy-level checkout guardrail** — agent instructions separate browsing from checkout and require explicit confirmation before the write-capable tool is called.
 - **Deterministic data access** — catalog search, rating aggregation, and order persistence happen through SQLite-backed Python tools rather than free-form model output.
 - **Multi-turn resolution** — displayed product IDs let follow-up requests such as `order #2` map back to a specific record.
 - **Deployable UI** — Streamlit provides a conversational interface for both text and image-based shopping.
@@ -56,7 +56,7 @@ flowchart LR
 | Decision | Why I made it | Trade-off |
 | --- | --- | --- |
 | Keep search/ratings/checkout outside the LLM | Business data and writes stay deterministic | More application code than a prompt-only prototype |
-| Require explicit confirmation before checkout | Prevents browsing from silently becoming an action | Adds one interaction step |
+| Require explicit confirmation before checkout | Demonstrates a guarded action workflow | Currently enforced by agent policy; production should enforce it in application state |
 | Preserve product IDs in agent responses | Makes follow-up selection resolvable | Conversation format becomes part of the agent contract |
 | Reuse the text search path after image understanding | Avoids duplicate recommendation logic | Vision quality can affect downstream search quality |
 | Use SQLite for the demo | Simple, inspectable, easy to run locally | Not suitable for high-concurrency production commerce |
@@ -72,7 +72,7 @@ The automated tests intentionally focus on deterministic components that can be 
 
 CI runs the test suite on every push and pull request through GitHub Actions.
 
-**Current testing gap:** the repository does not yet include a full end-to-end agent evaluation suite. A production version should add tool-call regression tests, structured outputs, and trace-based evaluation.
+**Current testing gap:** the repository does not yet include a full end-to-end agent evaluation suite. A production version should add tool-call regression tests, structured outputs, trace-based evaluation, and application-level authorization around checkout.
 
 ## Technology stack
 
@@ -142,6 +142,7 @@ Current limitations:
 - demo checkout only; no payment processing
 - SQLite rather than a hosted transactional database
 - model and vision outputs can vary
+- confirmation is currently an agent-policy rule rather than a hard application state gate
 - no end-to-end agent benchmark yet
 
-The next engineering upgrades I would make are structured tool outputs, inventory-aware transactions, trace/evaluation tooling, integration tests, and a hosted database with user-specific carts.
+The next engineering upgrades I would make are structured tool outputs, application-level checkout authorization, inventory-aware transactions, trace/evaluation tooling, integration tests, and a hosted database with user-specific carts.
