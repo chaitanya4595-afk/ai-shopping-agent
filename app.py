@@ -5,27 +5,69 @@ import streamlit as st
 
 from ai_shopping_agent.agent import agent
 
-# ---------------------------------------------------------------------------
-# Page config
-# ---------------------------------------------------------------------------
-st.set_page_config(page_title="AI Shopping Assistant", page_icon="🛒", layout="wide")
+st.set_page_config(
+    page_title="AI Shopping Agent",
+    page_icon="🛒",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-# Initialize chat state before any UI action can append to it.
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-st.title("🛒 AI Shopping Assistant")
-st.caption("Tell me what you want — I'll search, rate, and order the best match for you.")
+st.title("🛒 AI Shopping Agent")
+st.caption(
+    "A multimodal, tool-using agent that searches products, checks ratings, "
+    "and executes a demo checkout only after confirmation."
+)
 
-# ---------------------------------------------------------------------------
-# Sidebar — shop by image
-# ---------------------------------------------------------------------------
+step1, step2, step3 = st.columns(3)
+with step1:
+    with st.container(border=True):
+        st.markdown("**1 · Search**")
+        st.caption("Describe what you want or upload a product image.")
+with step2:
+    with st.container(border=True):
+        st.markdown("**2 · Compare**")
+        st.caption("The agent searches the catalog and checks ratings.")
+with step3:
+    with st.container(border=True):
+        st.markdown("**3 · Confirm**")
+        st.caption("Checkout is triggered only after you select a product.")
+
+with st.expander("How this demo works"):
+    st.markdown(
+        """
+        **Text path:** request → agent → product search → rating lookup → candidates  
+        **Image path:** image → vision model → search intent → same product-search flow  
+        **Order path:** displayed candidates → explicit user selection → demo checkout
+
+        Product data, ratings, and demo orders are stored in SQLite. The language model
+        orchestrates tools; it does not directly query or write the database.
+        """
+    )
+
 with st.sidebar:
-    st.header("Shop by Image")
-    st.caption("Upload a photo of a product and I'll find similar items in our store.")
+    st.header("Demo guide")
+    st.markdown("Try this prompt:")
+    st.code("I want organic honey under $20 with a 4.5+ rating", language=None)
+    st.caption("Then reply with `order #1` or `yes` to test the checkout path.")
+
+    if st.button("Clear conversation", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.pop("pending_image", None)
+        pending_path = st.session_state.pop("pending_image_path", None)
+        if pending_path and os.path.exists(pending_path):
+            os.remove(pending_path)
+        st.rerun()
+
+    st.divider()
+    st.subheader("Shop by image")
+    st.caption("Upload a product photo and the vision model will turn it into search intent.")
 
     uploaded_file = st.file_uploader(
-        "Upload product image", type=["jpg", "jpeg", "png", "webp"]
+        "Upload product image",
+        type=["jpg", "jpeg", "png", "webp"],
     )
 
     if uploaded_file:
@@ -43,50 +85,61 @@ with st.sidebar:
         )
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.session_state.pending_image = uploaded_file.name
+        st.session_state.pending_image_path = image_path
         st.rerun()
 
-# ---------------------------------------------------------------------------
-# Render history — show a friendlier label for image-search messages
-# ---------------------------------------------------------------------------
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if msg["role"] == "user" and msg["content"].startswith("I uploaded a product image"):
-            filename = msg["content"].split("Image path:")[-1].strip()
-            st.markdown(f"Searching by image: **{os.path.basename(filename)}**")
+            st.markdown(
+                f"Searching by image: **{st.session_state.get('pending_image', 'uploaded product')}**"
+            )
         else:
             st.markdown(msg["content"].replace("$", r"\$"))
 
-# ---------------------------------------------------------------------------
-# Run agent if there's an unprocessed image-search message
-# ---------------------------------------------------------------------------
 if (
     st.session_state.messages
     and st.session_state.messages[-1]["role"] == "user"
     and "pending_image" in st.session_state
 ):
     with st.chat_message("assistant"):
-        with st.spinner("Analyzing image and searching…"):
-            result = agent.invoke({"messages": st.session_state.messages})
-            response = result["messages"][-1].content.replace("`", "")
-        st.markdown(response.replace("$", r"\$"))
+        try:
+            with st.spinner("Analyzing the image, searching the catalog, and checking ratings…"):
+                result = agent.invoke({"messages": st.session_state.messages})
+                response = result["messages"][-1].content.replace("`", "")
+            st.markdown(response.replace("$", r"\$"))
+            st.session_state.messages.append({"role": "assistant", "content": response})
+        except Exception as exc:
+            st.error("The agent could not complete that request. Please try again.")
+            st.caption(f"Demo error: {exc}")
+        finally:
+            pending_path = st.session_state.pop("pending_image_path", None)
+            if pending_path and os.path.exists(pending_path):
+                os.remove(pending_path)
+            st.session_state.pop("pending_image", None)
+        st.rerun()
 
-    st.session_state.messages.append({"role": "assistant", "content": response})
-    del st.session_state.pending_image
-    st.rerun()
-
-# ---------------------------------------------------------------------------
-# Text input
-# ---------------------------------------------------------------------------
-if prompt := st.chat_input("e.g. I want organic honey under $15 with 4+ rating"):
+if prompt := st.chat_input("Ask for a product, price range, organic preference, or minimum rating"):
     st.session_state.messages.append({"role": "user", "content": prompt})
+
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("Thinking…"):
-            result = agent.invoke({"messages": st.session_state.messages})
-            response = result["messages"][-1].content.replace("`", "")
-        st.markdown(response.replace("$", r"\$"))
+        try:
+            with st.spinner("Searching and checking the best matches…"):
+                result = agent.invoke({"messages": st.session_state.messages})
+                response = result["messages"][-1].content.replace("`", "")
+            st.markdown(response.replace("$", r"\$"))
+            st.session_state.messages.append({"role": "assistant", "content": response})
+        except Exception as exc:
+            st.error("The agent could not complete that request. Please try again.")
+            st.caption(f"Demo error: {exc}")
 
-    st.session_state.messages.append({"role": "assistant", "content": response})
     st.rerun()
+
+st.divider()
+st.caption(
+    "Portfolio demo · Uses a small local catalog and simulated checkout. "
+    "No real payment or fulfillment occurs."
+)
