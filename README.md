@@ -1,7 +1,9 @@
 # AI Shopping Agent
 
+[Profile](https://github.com/kcrokkam) · [All projects](https://github.com/kcrokkam/agentic-ai-projects)
+
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://ai-shopping-agent-fvz8dpwpsfrihivomnkcz2.streamlit.app/)
-[![Tests](https://github.com/chaitanya4595-afk/ai-shopping-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/chaitanya4595-afk/ai-shopping-agent/actions/workflows/tests.yml)
+[![Tests](https://github.com/kcrokkam/ai-shopping-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/kcrokkam/ai-shopping-agent/actions/workflows/tests.yml)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![LangChain](https://img.shields.io/badge/LangChain-Agent%20Tools-1C3C3C)
 
@@ -110,7 +112,7 @@ For a deeper technical walkthrough, see [ARCHITECTURE.md](ARCHITECTURE.md).
 ## Run locally
 
 ```bash
-git clone https://github.com/chaitanya4595-afk/ai-shopping-agent.git
+git clone https://github.com/kcrokkam/ai-shopping-agent.git
 cd ai-shopping-agent
 uv sync --extra dev
 cp .env.example .env
