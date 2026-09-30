@@ -6,7 +6,7 @@ I built a shopping assistant that can search a catalog, check ratings, identify 
 
 The app supports text and image input through Streamlit. LangChain handles the agent loop, Groq serves the language and vision models, and SQLite stores the catalog, reviews, and demo orders.
 
-[Open the app](https://ai-shopping-agent-fvz8dpwpsfrihivomnkcz2.streamlit.app/) · [Architecture](ARCHITECTURE.md) · [Tests](tests/)
+[Open the app](https://ai-shopping-agent-nbnus6ixgzzhpu9hkatg5z.streamlit.app/) · [Architecture](ARCHITECTURE.md) · [Tests](tests/)
 
 ## Try it
 
