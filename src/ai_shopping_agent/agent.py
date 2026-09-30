@@ -17,8 +17,12 @@ load_dotenv()
 
 DB_PATH = str(Path(__file__).resolve().parents[2] / "data" / "store.db")
 
-llm = ChatGroq(model="qwen/qwen3.8-27b", temperature=0, max_tokens=900)
-vision_llm = ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct", temperature=0)
+model = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
+vision_model = os.getenv("GROQ_VISION_MODEL", "qwen/qwen3.8-27b")
+llm = ChatGroq(model=model, temperature=0, max_tokens=900, timeout=45, max_retries=1,
+               **({"reasoning_format": "parsed"} if model.startswith("qwen/") else {}))
+vision_llm = ChatGroq(model=vision_model, temperature=0, max_tokens=500, timeout=45, max_retries=1,
+                      **({"reasoning_format": "parsed"} if vision_model.startswith("qwen/") else {}))
 
 
 # ---------------------------------------------------------------------------

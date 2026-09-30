@@ -11,7 +11,7 @@ flowchart LR
     U[User] --> UI[Streamlit]
     UI --> A[LangChain Agent\nQwen on Groq]
 
-    UI -->|image upload| V[Llama 4 Scout]
+    UI -->|image upload| V[Qwen3.8-27B]
     V -->|product description + search intent| A
 
     A --> S[search_products]

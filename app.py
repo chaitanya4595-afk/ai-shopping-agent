@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 
@@ -14,6 +15,8 @@ st.set_page_config(
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "request_error" not in st.session_state:
+    st.session_state.request_error = None
 
 st.title("🛒 AI Shopping Agent")
 st.caption(
@@ -55,6 +58,7 @@ with st.sidebar:
 
     if st.button("Clear conversation", use_container_width=True):
         st.session_state.messages = []
+        st.session_state.request_error = None
         st.session_state.pop("pending_image", None)
         pending_path = st.session_state.pop("pending_image_path", None)
         if pending_path and os.path.exists(pending_path):
@@ -88,6 +92,9 @@ with st.sidebar:
         st.session_state.pending_image_path = image_path
         st.rerun()
 
+if st.session_state.request_error:
+    st.error(st.session_state.request_error)
+
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if msg["role"] == "user" and msg["content"].startswith("I uploaded a product image"):
@@ -104,14 +111,15 @@ if (
 ):
     with st.chat_message("assistant"):
         try:
+            st.session_state.request_error = None
             with st.spinner("Analyzing the image, searching the catalog, and checking ratings…"):
                 result = agent.invoke({"messages": st.session_state.messages})
                 response = result["messages"][-1].content.replace("`", "")
             st.markdown(response.replace("$", r"\$"))
             st.session_state.messages.append({"role": "assistant", "content": response})
-        except Exception as exc:
-            st.error("The agent could not complete that request. Please try again.")
-            st.caption(f"Demo error: {exc}")
+        except Exception:
+            logging.getLogger(__name__).exception("Shopping request failed")
+            st.session_state.request_error = "The agent could not complete that request. Please try again."
         finally:
             pending_path = st.session_state.pop("pending_image_path", None)
             if pending_path and os.path.exists(pending_path):
@@ -127,14 +135,15 @@ if prompt := st.chat_input("Ask for a product, price range, organic preference, 
 
     with st.chat_message("assistant"):
         try:
+            st.session_state.request_error = None
             with st.spinner("Searching and checking the best matches…"):
                 result = agent.invoke({"messages": st.session_state.messages})
                 response = result["messages"][-1].content.replace("`", "")
             st.markdown(response.replace("$", r"\$"))
             st.session_state.messages.append({"role": "assistant", "content": response})
-        except Exception as exc:
-            st.error("The agent could not complete that request. Please try again.")
-            st.caption(f"Demo error: {exc}")
+        except Exception:
+            logging.getLogger(__name__).exception("Shopping request failed")
+            st.session_state.request_error = "The agent could not complete that request. Please try again."
 
     st.rerun()
 
