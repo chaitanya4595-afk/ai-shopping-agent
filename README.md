@@ -1,115 +1,55 @@
 # AI Shopping Agent
 
-[Profile](https://github.com/kcrokkam) · [All projects](https://github.com/kcrokkam/agentic-ai-projects)
+[About me](https://github.com/kcrokkam) · [My other projects](https://github.com/kcrokkam/agentic-ai-projects)
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://ai-shopping-agent-fvz8dpwpsfrihivomnkcz2.streamlit.app/)
-[![Tests](https://github.com/kcrokkam/ai-shopping-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/kcrokkam/ai-shopping-agent/actions/workflows/tests.yml)
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
-![LangChain](https://img.shields.io/badge/LangChain-Agent%20Tools-1C3C3C)
+I built a shopping assistant that can search a catalog, check ratings, identify products from an image, and place a demo order. I wanted to explore how an LLM coordinates several tools while keeping product data and transaction logic in ordinary Python code.
 
-> A multimodal, tool-using shopping assistant that searches a catalog, checks ratings, understands product images, and follows an explicit-confirmation policy before demo checkout.
+The app supports text and image input through Streamlit. LangChain handles the agent loop, Groq serves the language and vision models, and SQLite stores the catalog, reviews, and demo orders.
 
-**Why this project matters:** the LLM does not own business data or transaction logic. It orchestrates the workflow, while deterministic tools handle search, ratings, and checkout. That separation makes the system easier to reason about, test, and extend.
+[Open the app](https://ai-shopping-agent-fvz8dpwpsfrihivomnkcz2.streamlit.app/) · [Architecture](ARCHITECTURE.md) · [Tests](tests/)
 
-## Try it in 60 seconds
+## Try it
 
-**Live app:** https://ai-shopping-agent-fvz8dpwpsfrihivomnkcz2.streamlit.app/
+1. Enter `I want organic honey under $20 with a 4.5+ rating`.
+2. Review the products and ratings the agent returns.
+3. Reply with `order #1` to try the demo checkout.
+4. Upload an image from [docs/sample_images](docs/sample_images/) to search visually.
 
-1. Enter: `I want organic honey under $20 with a 4.5+ rating`
-2. The agent searches the catalog and checks ratings before presenting candidates.
-3. Reply with `order #1` or `yes` to exercise the confirmation-to-checkout path.
-4. Upload `docs/sample_images/honey.png` to test the multimodal search flow.
+The catalog is sample data and checkout does not process a real payment.
 
-The catalog and checkout are demo data/actions; no real payment is processed.
-
-## System flow
+## How I built it
 
 ```mermaid
 flowchart LR
-    U[User] --> UI[Streamlit UI]
-    UI --> A[LangChain Agent\nQwen on Groq]
-
-    UI -->|uploaded image| V[Llama 4 Scout\nVision]
-    V -->|search intent| A
-
-    A --> S[search_products]
-    A --> R[get_rating]
-    S --> DB[(SQLite catalog)]
+    U[Text or image input] --> UI[Streamlit]
+    UI --> A[LangChain agent]
+    A --> V[Vision tool]
+    A --> S[Catalog search]
+    A --> R[Rating lookup]
+    A --> C[Demo checkout]
+    S --> DB[(SQLite)]
     R --> DB
-
-    A --> C{User confirmed purchase?}
-    C -->|No| P[Present ranked products]
-    C -->|Yes| O[checkout]
-    O --> DB
-    O --> OK[Order confirmation]
+    C --> DB
 ```
 
-## What I engineered
+I kept search, ratings, and checkout outside the model. The agent decides when to call them, but the tools return catalog data and carry out database operations. Product IDs let a user refer back to an item in a follow-up message.
 
-- **Tool-based agent orchestration** — the model chooses when to search, retrieve ratings, inspect an image, or execute checkout.
-- **Multimodal routing** — a vision model converts an uploaded image into product-search intent, then reuses the same search pipeline as text input.
-- **Policy-level checkout guardrail** — agent instructions separate browsing from checkout and require explicit confirmation before the write-capable tool is called.
-- **Deterministic data access** — catalog search, rating aggregation, and order persistence happen through SQLite-backed Python tools rather than free-form model output.
-- **Multi-turn resolution** — displayed product IDs let follow-up requests such as `order #2` map back to a specific record.
-- **Deployable UI** — Streamlit provides a conversational interface for both text and image-based shopping.
+For image input, a vision model identifies the product and the agent uses that information in the same catalog-search workflow as a text request. The checkout instructions require confirmation before ordering. That rule currently lives in the agent prompt; enforcing it in application state is an improvement I would make before supporting real transactions.
 
-## Engineering decisions
+## Code structure
 
-| Decision | Why I made it | Trade-off |
-| --- | --- | --- |
-| Keep search/ratings/checkout outside the LLM | Business data and writes stay deterministic | More application code than a prompt-only prototype |
-| Require explicit confirmation before checkout | Demonstrates a guarded action workflow | Currently enforced by agent policy; production should enforce it in application state |
-| Preserve product IDs in agent responses | Makes follow-up selection resolvable | Conversation format becomes part of the agent contract |
-| Reuse the text search path after image understanding | Avoids duplicate recommendation logic | Vision quality can affect downstream search quality |
-| Use SQLite for the demo | Simple, inspectable, easy to run locally | Not suitable for high-concurrency production commerce |
-
-## Reliability and testing
-
-The automated tests intentionally focus on deterministic components that can be verified without consuming model API credits:
-
-- catalog integrity
-- known demo-product availability
-- single-product rating aggregation
-- batch rating aggregation and requested-ID ordering
-
-CI runs the test suite on every push and pull request through GitHub Actions.
-
-**Current testing gap:** the repository does not yet include a full end-to-end agent evaluation suite. A production version should add tool-call regression tests, structured outputs, trace-based evaluation, and application-level authorization around checkout.
-
-## Technology stack
-
-| Technology | Role |
+| File or folder | Responsibility |
 | --- | --- |
-| Python | Application and tool logic |
-| LangChain | Agent and tool orchestration |
-| Groq / Qwen | Main reasoning model |
-| Llama 4 Scout | Product-image understanding |
-| SQLite | Products, reviews, and demo orders |
-| Streamlit | Conversational UI and deployment |
-| pytest | Deterministic component tests |
-| GitHub Actions | Continuous test execution |
-| uv | Dependency and environment management |
-
-## Repository map
-
-```text
-.
-├── app.py                         # Streamlit entry point
-├── src/ai_shopping_agent/
-│   ├── agent.py                   # Models, tools, and agent policy
-│   └── reviews.py                 # Deterministic rating logic
-├── data/store.db                  # Demo catalog, reviews, orders
-├── scripts/setup_db.py            # Rebuild demo database
-├── docs/sample_images/            # Images for multimodal testing
-├── tests/                         # Deterministic component tests
-├── ARCHITECTURE.md                # Deeper system design notes
-├── pyproject.toml
-└── .github/workflows/tests.yml    # CI
-```
-
-For a deeper technical walkthrough, see [ARCHITECTURE.md](ARCHITECTURE.md).
+| `app.py` | Streamlit conversation and image upload |
+| `src/ai_shopping_agent/agent.py` | Models, tools, and agent instructions |
+| `src/ai_shopping_agent/reviews.py` | Rating calculations |
+| `data/store.db` | Sample catalog, reviews, and orders |
+| `scripts/setup_db.py` | Database setup |
+| `tests/` | Catalog and rating tests |
 
 ## Run locally
+
+Use Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 git clone https://github.com/kcrokkam/ai-shopping-agent.git
@@ -118,33 +58,18 @@ uv sync --extra dev
 cp .env.example .env
 ```
 
-Add your Groq API key to `.env`:
-
-```env
-GROQ_API_KEY=your_key_here
-```
-
-Run the app:
+Set `GROQ_API_KEY` in `.env`, then run:
 
 ```bash
 uv run streamlit run app.py
 ```
 
-Run tests:
+## Testing and limitations
 
 ```bash
 uv run pytest
 ```
 
-## Limitations and next upgrades
+I test catalog integrity, known sample products, and single/batch rating calculations without calling a model. [GitHub Actions](https://github.com/kcrokkam/ai-shopping-agent/actions/workflows/tests.yml) runs those checks on pushes and pull requests.
 
-Current limitations:
-
-- small static demo catalog rather than a live retailer inventory
-- demo checkout only; no payment processing
-- SQLite rather than a hosted transactional database
-- model and vision outputs can vary
-- confirmation is currently an agent-policy rule rather than a hard application state gate
-- no end-to-end agent benchmark yet
-
-The next engineering upgrades I would make are structured tool outputs, application-level checkout authorization, inventory-aware transactions, trace/evaluation tooling, integration tests, and a hosted database with user-specific carts.
+I have not added an end-to-end agent evaluation set yet. The current application also uses a small static catalog, SQLite, and prompt-level checkout confirmation. My next steps are tool-call regression tests, an application-level confirmation gate, and better handling of inventory and user-specific carts.
